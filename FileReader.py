@@ -1,5 +1,8 @@
 import pandas as pd
 import streamlit as st
+import json
+import requests
+import io
 
 def read_file(file,termination):
     if termination == 'csv':
@@ -8,27 +11,14 @@ def read_file(file,termination):
         process_xlsx(file=file)
     if termination == 'json':
         process_json(file=file)
-    if termination == 'pdf':
-        process_pdf(file=file)
-    if termination == 'html':
-        process_html(file=file)
-    if termination == 'xml':
-        process_xml(file=file)
 
-def read_from_url(url):
-    termination = url.split('.')[-1].strip('?raw=true')
-    if termination == 'csv':
+def read_from_url(url,format_type):
+    if format_type == 'csv':
         process_csv(url=url)
-    if termination == 'xlsx':
+    if format_type == 'xlsx':
         process_xlsx(url=url)
-    if termination == 'json':
+    if format_type == 'json':
         process_json(url=url)
-    if termination == 'pdf':
-        process_pdf(url=url)
-    if termination == 'html':
-        process_html(url=url)
-    if termination == 'xml':
-        process_xml(url=url)
 
 def process_csv(file = None, url = None):
     if file or url:
@@ -42,7 +32,8 @@ def process_csv(file = None, url = None):
                 df = pd.read_csv(file,sep=separator,header=heading)
 
             if url:
-                df = pd.read_csv(url,sep=separator,header=heading)
+                file = requests.get(url).text
+                df = pd.read_csv(io.StringIO(file),sep=separator,header=heading)
 
             if len(df):
                 st.dataframe(df)
@@ -52,13 +43,22 @@ def process_xlsx(file = None, url = None):
     pass
 
 def process_json(file = None, url = None):
-    pass
+    key = st.text_input('if it is a nested json place the json key you want to stract, leave blank if you want it as it comes','')
 
-def process_pdf(file = None, url = None):
-    pass
-
-def process_html(file = None, url = None):
-    pass
-
-def process_xml(file = None, url = None):
-    pass
+    load = st.button('Read Dataframe')
+    if load:
+        if file:
+            if key:
+                df = pd.read_json(file)
+                df = pd.DataFrame(df[key])
+            else:
+                df = pd.read_json(file)
+        if url:
+            file = requests.get(url).text
+            if key:
+                df = pd.DataFrame(json.loads(file)[key])
+            else:
+                df = pd.DataFrame([json.loads(file)])
+        if len(df):
+                st.dataframe(df)
+                df.to_csv('./assets/data/data.csv',index=False)

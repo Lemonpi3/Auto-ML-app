@@ -8,14 +8,13 @@ from streamlit_pandas_profiling import st_profile_report
 
 from pycaret import regression, classification
 
-st.set_page_config(layout="wide",page_title='👽Ayy Lmao👽',page_icon='👽')
+st.set_page_config(layout="wide",page_title='Auto ML app 🤖',page_icon='🤖')
 
 with st.sidebar:
     st.image("assets/imgs/305129231.png")
     st.title("Auto ML app")
     choice = st.radio("Navigation",["Load Dataset", "Profiling", "Clean Dataset", "ML", "Download",])
     st.info("This application speeds up the data cleaning process as well as allowing you to build an Auto ML pipeline.")
-
 
 if choice == "Load Dataset":
     st.title("Load the data to process")
@@ -30,9 +29,9 @@ if choice == "Load Dataset":
 
     if up_choice == "Url":
         file_url = st.text_input("Paste the url to your Dataset here (only suports github raw)","https://github.com/Lemonpi3/datasets-coderhouse/blob/main/telecom_customer_churn.csv?raw=true")
+        file_format = st.selectbox('Choose file type',['csv','json','xlsx'],0)
         if file_url:
-            FileReader.read_from_url(file_url)
-
+            FileReader.read_from_url(file_url, file_format)
 
 if choice == "Profiling":
     if os.path.exists("./assets/data/data.csv"):
@@ -46,7 +45,7 @@ if choice == "Clean Dataset":
     pass
 
 if choice == "ML":
-    st.title('ML Go BURRRRRRRRRRRRRRRRRR')
+    st.title('Model Training')
     if os.path.exists("./assets/data/data.csv"):
         df = pd.read_csv("./assets/data/data.csv")
         model_type = st.selectbox('Model Type',['Regression','Classification'])

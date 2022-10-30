@@ -1,5 +1,6 @@
 import streamlit as st
 import FileReader
+import DataCleaner
 import os
 
 import pandas as pd
@@ -13,7 +14,7 @@ st.set_page_config(layout="wide",page_title='Auto ML app 🤖',page_icon='🤖')
 with st.sidebar:
     st.image("assets/imgs/305129231.png")
     st.title("Auto ML app")
-    choice = st.radio("Navigation",["Load Dataset", "Profiling", "Clean Dataset", "ML", "Download",])
+    choice = st.radio("Navigation",["Load Dataset", "Profiling", "ML", "Download",])
     st.info("This application speeds up the data cleaning process as well as allowing you to build an Auto ML pipeline.")
 
 if choice == "Load Dataset":
@@ -42,7 +43,15 @@ if choice == "Profiling":
         st.warning("No dataset loaded")
 
 if choice == "Clean Dataset":
-    pass
+    if os.path.exists("./assets/data/data.csv"):
+        st.title('Data cleaning')
+        clean_mode = st.selectbox('Select clean mode',['auto','manual'],0)
+        if clean_mode == 'auto':
+            DataCleaner.auto_clean()
+        if clean_mode == 'manual':
+            DataCleaner.manual_clean()
+    else:
+        st.warning("No dataset loaded")
 
 if choice == "ML":
     st.title('Model Training')
@@ -51,10 +60,21 @@ if choice == "ML":
         model_type = st.selectbox('Model Type',['Regression','Classification'])
         target = st.selectbox('Select target column', df.columns)
         train_size = st.slider('Train size',min_value=0.,max_value=1. ,value=0.8)
+        use_gpu = st.checkbox('Use GPU')
+        preprocess = st.checkbox('Preprocess')
+        if preprocess:
+            st.header('Column Setup')
+            st.info('Input column names separated by ", "\nExample: Col 1, Col 2, Col 3')
+            categorical_features = st.text_input('Input Categorical features').split(', ')
+            ordinal_features = st.text_input('Input Ordinal columns').split(', ')
+            features_to_drop = st.text_input('Input features to Drop').split(', ')
+            
+
         train_model = st.button('Train model')
+
         if train_model:
             if model_type == 'Regression':
-                regression.setup(df,target=target,silent=True)
+                regression.setup(df,target=target,silent=True,use_gpu=use_gpu)
                 setup_df = regression.pull()
                 st.info("Loaded settings")
                 st.dataframe(setup_df)
@@ -76,7 +96,12 @@ if choice == "ML":
                 st.dataframe(compare_df)
                 best_model
                 classification.save_model(best_model,"best_model")
+    else:
+        st.warning("No dataset Loaded")
 
 if choice == "Download":
-    with open("best_model.pkl", 'rb') as f:
-        st.download_button("Download Model", f, "best_model.pkl")
+    if os.path.exists("./best_model.pkl"):
+        with open("best_model.pkl", 'rb') as f:
+            st.download_button("Download Model", f, "best_model.pkl")
+    else:
+        st.warning("There isn't a model aviable to download")

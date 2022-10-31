@@ -63,12 +63,53 @@ if choice == "ML":
         use_gpu = st.checkbox('Use GPU')
         preprocess = st.checkbox('Preprocess')
         if preprocess:
-            st.header('Column Setup')
-            st.info('Input column names separated by ", "\nExample: Col 1, Col 2, Col 3')
-            categorical_features = st.text_input('Input Categorical features').split(', ')
-            ordinal_features = st.text_input('Input Ordinal columns').split(', ')
-            features_to_drop = st.text_input('Input features to Drop').split(', ')
-            
+            #Categorical features
+            st.header('Categorical Columns Setup')
+            st.info('Categorical features that are not listed as ordinal will be one hot encoded')
+
+            categorical_features = st.multiselect('Input Categorical features',[col for col in df.columns if col != target])
+            if categorical_features:
+                categorical_imputation = st.selectbox('How would missing categorical features be imputed',['constant','mode'])
+
+                ordinal_features = st.multiselect('Input Ordinal columns',categorical_features)
+                ordinal_features_setted = {}
+                if ordinal_features:
+                    for feature in ordinal_features:
+                        ordinal_features_setted[feature] = st.multiselect(f'Select the order of values for {feature} starting from lower to higher',df[feature].unique())
+                        if len(ordinal_features_setted[feature]) < len(df[feature].unique()):
+                            st.warning('There are some values missing, if its null ignore this warning')
+                        if len(ordinal_features_setted[feature]) > len(df[feature].unique()):
+                            st.warning('There are some extra values')
+
+                high_cardinality_features = st.multiselect('Input High cardinality features',categorical_features)
+                if high_cardinality_features:
+                    high_cardinality_method = st.selectbox("Select how will high cardinalty features get imputed",['frequency','clustering'])
+
+            #Numerical Features
+            st.header('Numerical Columns Setup')
+            num_features = st.multiselect('Input Numerical features',[col for col in df.columns if col not in categorical_features])
+            if num_features:
+                numeric_imputation = st.selectbox('How would missing numerical features be inputed',['mean','median','zero'])
+                normalize = st.checkbox('Normalize')
+                if normalize:
+                    st.info("* zscore: is calculated as z = (x - u) / s\n\n* minmax: scales and translates each feature individually such that it is in the range of 0 - 1.\n\n* maxabs: scales and translates each feature individually such that the maximal absolute value of each feature will be 1.0.\n    It does not shift/center the data, and thus does not destroy any sparsity.\n\n* robust: scales and translates each feature according to the Interquartile range.\n  When the dataset contains outliers, robust scaler often gives better results.")
+                    normalize_method = st.selectbox('Normalize method',['zscore','minmax','maxabs','robust'])
+                    
+            #Date Features
+            st.header('Date Features')
+            date_features = st.multiselect('Input datetime format columns',[col for col in df.columns if (col not in categorical_features) and (col not in num_features)])
+            #ignore cols
+            st.header('Features to Ignore')
+            ignore_features = st.multiselect('Input columns to ignore during model training',list(df.columns))
+            if target in ignore_features:
+                st.error(f'The target feature "{target}" is going to be ignored')
+            for feature in categorical_features:
+                if feature in ignore_features:
+                    st.error(f'The categorical feature {feature} is going to be ignored')
+            for feature in num_features:
+                if feature in ignore_features:
+                    st.error(f'The numerical feature {feature} is going to be ignored')
+            null_rows_to_drop = st.multiselect('Drop rows that contain null values in cols:',list(df.columns))
 
         train_model = st.button('Train model')
 
@@ -86,7 +127,7 @@ if choice == "ML":
                 regression.save_model(best_model,"best_model")
 
             if model_type == 'Classification':
-                classification.setup(df,target=target,silent=True)
+                classification.setup(df,target=target,silent=True,use_gpu=use_gpu)
                 setup_df = classification.pull()
                 st.info("Loaded settings")
                 st.dataframe(setup_df)
@@ -101,6 +142,7 @@ if choice == "ML":
 
 if choice == "Download":
     if os.path.exists("./best_model.pkl"):
+        st.header("Download Model")
         with open("best_model.pkl", 'rb') as f:
             st.download_button("Download Model", f, "best_model.pkl")
     else:

@@ -8,6 +8,7 @@ import pandas_profiling
 from streamlit_pandas_profiling import st_profile_report
 
 from pycaret import regression, classification
+from imblearn.over_sampling import SMOTENC, SMOTE, RandomOverSampler, ADASYN, KMeansSMOTE, SVMSMOTE
 
 st.set_page_config(layout="wide",page_title='Auto ML app 🤖',page_icon='🤖')
 
@@ -63,6 +64,29 @@ if choice == "ML":
         use_gpu = st.checkbox('Use GPU')
         preprocess = st.checkbox('Preprocess')
         if preprocess:
+            if model_type == 'Classification':
+                st.header('Classification specific settings')
+                balance_ds = st.checkbox('Balance Dataset')
+                if balance_ds:
+                    balance_select = st.selectbox('Balance method',['SMOTENC', 'SMOTE', 'RandomOverSampler', 'ADASYN', 'KMeansSMOTE', 'SVMSMOTE'])
+                    if balance_select == 'SMOTENC':
+                        st.info("Synthetic Minority Over-sampling Technique for Nominal and Continuous.\nUnlike SMOTE, SMOTE-NC is for a dataset containing numerical and categorical features. However, it is not designed to work with only categorical features.")
+                        balance_method = SMOTENC
+                    if balance_select == 'SMOTE':
+                        st.info("Only accepts numerical variables.")
+                        balance_method = SMOTE
+                    if balance_select == 'RandomOverSampler':
+                        st.info("Object to over-sample the minority class(es) by picking samples at random with replacement. The bootstrap can be generated in a smoothed manner.")
+                        balance_method = RandomOverSampler
+                    if balance_select == 'ADASYN':
+                        st.info("This method is similar to SMOTE but it generates different number of samples depending on an estimate of the local distribution of the class to be oversampled.")
+                        balance_method = ADASYN
+                    if balance_select == 'KMeansSMOTE':
+                        st.info("Apply a KMeans clustering before to over-sample using SMOTE.")
+                        balance_method = KMeansSMOTE
+                    if balance_select == 'SVMSMOTE':
+                        st.info("Variant of SMOTE algorithm which use an SVM algorithm to detect sample to use for generating new synthetic samples")
+                        balance_method = SVMSMOTE
             #Categorical features
             st.header('Categorical Columns Setup')
             st.info('Categorical features that are not listed as ordinal will be one hot encoded')
@@ -70,7 +94,11 @@ if choice == "ML":
             categorical_features = st.multiselect('Input Categorical features',[col for col in df.columns if col != target])
             if categorical_features:
                 categorical_imputation = st.selectbox('How would missing categorical features be imputed',['constant','mode'])
-
+                ignore_low_variance = st.checkbox('Ignore low variance')
+                st.info('When set to True, all categorical features with insignificant variances are removed from the data. The variance is calculated using the ratio of unique values to the number of samples, and the ratio of the most common value to the frequency of the second most common value.')
+                combine_rare_levels = st.checkbox('combine features with that are below a certain threshold')    
+                if combine_rare_levels:
+                    rare_level_threshold = st.slider('rare features threshold',0.,1.,0.1)                
                 ordinal_features = st.multiselect('Input Ordinal columns',categorical_features)
                 ordinal_features_setted = {}
                 if ordinal_features:
@@ -94,7 +122,10 @@ if choice == "ML":
                 if normalize:
                     st.info("* zscore: is calculated as z = (x - u) / s\n\n* minmax: scales and translates each feature individually such that it is in the range of 0 - 1.\n\n* maxabs: scales and translates each feature individually such that the maximal absolute value of each feature will be 1.0.\n    It does not shift/center the data, and thus does not destroy any sparsity.\n\n* robust: scales and translates each feature according to the Interquartile range.\n  When the dataset contains outliers, robust scaler often gives better results.")
                     normalize_method = st.selectbox('Normalize method',['zscore','minmax','maxabs','robust'])
-                    
+                remove_outliers = st.checkbox('remove outliers')
+                st.info('Removes outliers using the Singular Value Decomposition.')  
+                if remove_outliers:
+                    outliers_threshold = st.slider('Outlier threshold',0.,1.,0.05)         
             #Date Features
             st.header('Date Features')
             date_features = st.multiselect('Input datetime format columns',[col for col in df.columns if (col not in categorical_features) and (col not in num_features)])
@@ -110,10 +141,20 @@ if choice == "ML":
                 if feature in ignore_features:
                     st.error(f'The numerical feature {feature} is going to be ignored')
             null_rows_to_drop = st.multiselect('Drop rows that contain null values in cols:',list(df.columns))
-
+            #Resto de las columnas
+            st.header('Handle unkown columns')
+            st.info('For the columns that not chosen in any of the sections above')
+            handle_unknown_categorical = st.checkbox('Handle unknown categorical', True)
+            if handle_unknown_categorical:
+                unknown_categorical_method = st.selectbox('Method',['least_frequent','most_frequent'])
+            
         train_model = st.button('Train model')
 
         if train_model:
+            if preprocess:
+                df = df.drop_duplicates()
+                df[null_rows_to_drop] = df[null_rows_to_drop].drop_duplicates()
+
             if model_type == 'Regression':
                 regression.setup(df,target=target,silent=True,use_gpu=use_gpu)
                 setup_df = regression.pull()
@@ -127,7 +168,15 @@ if choice == "ML":
                 regression.save_model(best_model,"best_model")
 
             if model_type == 'Classification':
-                classification.setup(df,target=target,silent=True,use_gpu=use_gpu)
+                classification.setup(
+                    df, target= target, silent= True, use_gpu= use_gpu, preprocess= preprocess, fix_imbalance= balance_ds, fix_imbalance_method= balance_method,
+                    categorical_features= categorical_features, categorical_imputation= categorical_imputation, ignore_low_variance= ignore_low_variance,
+                    combine_rare_levels= combine_rare_levels, rare_level_threshold= rare_level_threshold,ordinal_features= ordinal_features_setted,
+                    high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method,numerical_features= num_features,
+                    numeric_imputation= numeric_imputation, normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
+                    outliers_threshold= outliers_threshold, date_features= date_features, ignore_features=ignore_features, handle_unknown_categorical= handle_unknown_categorical,
+                    unknown_categorical_method = unknown_categorical_method
+                                        )
                 setup_df = classification.pull()
                 st.info("Loaded settings")
                 st.dataframe(setup_df)

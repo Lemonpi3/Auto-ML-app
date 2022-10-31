@@ -112,6 +112,8 @@ if choice == "ML":
                 high_cardinality_features = st.multiselect('Input High cardinality features',categorical_features)
                 if high_cardinality_features:
                     high_cardinality_method = st.selectbox("Select how will high cardinalty features get imputed",['frequency','clustering'])
+                else:
+                    high_cardinality_method = 'frequency'
 
             #Numerical Features
             st.header('Numerical Columns Setup')
@@ -172,11 +174,11 @@ if choice == "ML":
                     df, target= target, silent= True, use_gpu= use_gpu, preprocess= preprocess, fix_imbalance= balance_ds, fix_imbalance_method= balance_method,
                     categorical_features= categorical_features, categorical_imputation= categorical_imputation, ignore_low_variance= ignore_low_variance,
                     combine_rare_levels= combine_rare_levels, rare_level_threshold= rare_level_threshold,ordinal_features= ordinal_features_setted,
-                    high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method,numerical_features= num_features,
+                    high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method, numeric_features= num_features,
                     numeric_imputation= numeric_imputation, normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
                     outliers_threshold= outliers_threshold, date_features= date_features, ignore_features=ignore_features, handle_unknown_categorical= handle_unknown_categorical,
                     unknown_categorical_method = unknown_categorical_method
-                                        )
+                    )
                 setup_df = classification.pull()
                 st.info("Loaded settings")
                 st.dataframe(setup_df)

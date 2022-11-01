@@ -8,16 +8,20 @@ def read_file(file,termination):
     if termination == 'csv':
         process_csv(file=file)
     if termination == 'xlsx':
+        st.warning('TBD')
         process_xlsx(file=file)
     if termination == 'json':
         process_json(file=file)
 
 def read_from_url(url,format_type):
     if format_type == 'csv':
+        st.info('Make sure that the url leads directly to the csv')
         process_csv(url=url)
     if format_type == 'xlsx':
+        st.warning('TBD')
         process_xlsx(url=url)
     if format_type == 'json':
+        st.info('Make sure that the url leads directly to the json contents Example URL: http://api.steampowered.com/ISteamWebAPIUtil/GetSupportedAPIList/v0001/')
         process_json(url=url)
 
 def process_csv(file = None, url = None):

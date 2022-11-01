@@ -39,8 +39,10 @@ if choice == "Load Dataset":
 if choice == "Profiling":
     if os.path.exists("./assets/data/data.csv"):
         df = pd.read_csv("./assets/data/data.csv")
-        profile_report = df.profile_report()
-        st_profile_report(profile_report)        
+        st.info('Profiles the dataset with pandas_profiling')
+        if st.button('Profile the dataset'):
+            profile_report = df.profile_report()
+            st_profile_report(profile_report)        
     else:
         st.warning("No dataset loaded")
 
@@ -62,13 +64,18 @@ if choice == "ML":
         model_type = st.selectbox('Model Type',['Regression','Classification'])
         target = st.selectbox('Select target column', df.columns)
         train_size = st.slider('Train size',min_value=0.,max_value=1. ,value=0.8)
+        if model_type == 'Classification':
+            comparison_metric = st.selectbox('Metric to compare models',['Accuracy','AUC','F1','Recall','Prec.'])
+        elif model_type == 'Regression':
+            comparison_metric = st.selectbox('Metric to compare models',['R2','MAE','MSE','RMSE','MAPE'])
+            
         use_gpu = st.checkbox('Use GPU')
         preprocess = st.checkbox('Preprocess')
         if preprocess:
             seed = st.number_input('Seed',0)
             #Categorical features
             st.header('Categorical Columns Setup')
-            st.info('Categorical features that are not listed as ordinal will be one hot encoded')
+            st.info('* Categorical features that are not listed as ordinal will be one-hot encoded. \n* Drops duplicates automatically.')
 
             categorical_features = st.multiselect('Input Categorical features',[col for col in df.columns if col != target])
             if categorical_features:
@@ -98,14 +105,7 @@ if choice == "ML":
                     high_cardinality_method = st.selectbox("Select how will high cardinalty features get imputed",['frequency','clustering'],0)
                 else:
                     high_cardinality_method = 'frequency'
-            else:
-                categorical_imputation='constant'
-                ignore_low_variance = False
-                combine_rare_levels = False
-                rare_level_threshold = 0.1
-                ordinal_features_setted = None
-                high_cardinality_features = None
-                high_cardinality_method = 'frequency'
+            
             #Numerical Features
             st.header('Numerical Columns Setup')
             num_features = st.multiselect('Input Numerical features',[col for col in df.columns if col not in categorical_features])
@@ -141,9 +141,15 @@ if choice == "ML":
                     st.error(f'The numerical feature {feature} is going to be ignored')
             null_rows_to_drop = st.multiselect('Drop rows that contain null values in cols:',list(df.columns))
 
+            #Resto de las columnas
+            st.header('Handle unkown columns')
+            st.info('For the columns that not chosen in any of the sections above')
+            handle_unknown_categorical = st.checkbox('Handle unknown categorical', True)
+            if handle_unknown_categorical:
+                unknown_categorical_method = st.selectbox('Method',['least_frequent','most_frequent'],0)
+
             if model_type == 'Classification':
                 st.header('Classification specific settings')
-                comparison_metric = st.selectbox('Metric to compare models',['Accuracy','AUC','F1','Recall','Prec.'])
                 balance_ds = st.checkbox('Balance Dataset')
                 if balance_ds:
                     st.warning("Balancing feature it's disabled due to a library bug https://stackoverflow.com/questions/73362136/unboundlocalerror-local-variable-fix-imbalance-model-name-referenced-before-a")
@@ -168,14 +174,31 @@ if choice == "ML":
                         balance_method = SVMSMOTE(random_state=seed)
                 else:
                     balance_method = SMOTENC(categorical_features,random_state=seed)
-            #Resto de las columnas
-            st.header('Handle unkown columns')
-            st.info('For the columns that not chosen in any of the sections above')
-            handle_unknown_categorical = st.checkbox('Handle unknown categorical', True)
-            if handle_unknown_categorical:
-                unknown_categorical_method = st.selectbox('Method',['least_frequent','most_frequent'],0)
+        
         else:
-            comparison_metric ='Accuracy'
+            if model_type == 'Classification':
+                comparison_metric ='Accuracy'
+            elif model_type == 'Regression':
+                comparison_metric ='R2'
+            categorical_features = None
+            num_features = None
+            numeric_imputation = 'mean'
+            normalize = False 
+            normalize_method = 'zscore'
+            remove_outliers= False
+            outliers_threshold= 0.05
+            date_features = None
+            categorical_imputation='constant'
+            ignore_low_variance = False
+            combine_rare_levels = False
+            rare_level_threshold = 0.1
+            ordinal_features_setted = None
+            high_cardinality_features = None
+            high_cardinality_method = 'frequency'
+            ignore_features = None
+            handle_unknown_categorical = True
+            unknown_categorical_method = 'least_frequent'
+
         train_model = st.button('Train model')
 
         if train_model:
@@ -184,7 +207,15 @@ if choice == "ML":
                 df[null_rows_to_drop] = df[null_rows_to_drop].dropna()
 
             if model_type == 'Regression':
-                regression.setup(df,target=target,silent=True,use_gpu=use_gpu)
+                regression.setup(
+                    df, target= target, silent= True, use_gpu= use_gpu, preprocess= preprocess,
+                    categorical_features= categorical_features, categorical_imputation= categorical_imputation, ignore_low_variance= ignore_low_variance,
+                    combine_rare_levels= combine_rare_levels, rare_level_threshold= rare_level_threshold,ordinal_features= ordinal_features_setted,
+                    high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method, numeric_features= num_features,
+                    numeric_imputation= numeric_imputation, normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
+                    outliers_threshold= outliers_threshold, date_features= date_features, ignore_features=ignore_features, handle_unknown_categorical= handle_unknown_categorical,
+                    unknown_categorical_method = unknown_categorical_method
+                    )
                 setup_df = regression.pull()
                 st.info("Loaded settings")
                 st.dataframe(setup_df)

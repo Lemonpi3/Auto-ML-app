@@ -4,6 +4,7 @@ import numpy as np
 import os
 from pycaret import regression
 from scripts.classifer import ClassifierModel
+from scripts.regressor import RegressorModel
 
 class ModelSelection():
     def __init__(self) -> None:
@@ -108,8 +109,6 @@ class ModelSelection():
                     if balance_select == 'SVMSMOTE':
                         st.info("Variant of SMOTE algorithm which use an SVM algorithm to detect sample to use for generating new synthetic samples")
         
-                elif model_type == 'Regression':
-                    comparison_metric ='R2'
                 
             #Train Models
             if st.button('Train model'):
@@ -117,41 +116,36 @@ class ModelSelection():
                     df = df.drop_duplicates()
                     df[null_rows_to_drop] = df[null_rows_to_drop].dropna()
 
-                    if model_type == 'Classification':
-                        ClassifierModel(df, target= target, use_gpu= use_gpu, preprocess= preprocess,
-                                categorical_features= categorical_features, categorical_imputation= categorical_imputation, ignore_low_variance= ignore_low_variance,
-                                combine_rare_levels= combine_rare_levels, rare_level_threshold= rare_level_threshold,ordinal_features= ordinal_features_setted,
-                                high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method, numeric_features= num_features,
-                                numeric_imputation= numeric_imputation, normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
-                                outliers_threshold= outliers_threshold, date_features= date_features, ignore_features=ignore_features,
-                                handle_unknown_categorical= handle_unknown_categorical, unknown_categorical_method = unknown_categorical_method,
-                                balance_select=balance_select, balance_ds= balance_ds,train_size=train_size,comparison_metric=comparison_metric)
-                    elif model_type == 'Regression':
-                        pass
+                if model_type == 'Classification' and preprocess:
+                    ClassifierModel(df, target= target, use_gpu= use_gpu, preprocess= preprocess,
+                            categorical_features= categorical_features, categorical_imputation= categorical_imputation, ignore_low_variance= ignore_low_variance,
+                            combine_rare_levels= combine_rare_levels, rare_level_threshold= rare_level_threshold,ordinal_features= ordinal_features_setted,
+                            high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method, numeric_features= num_features,
+                            numeric_imputation= numeric_imputation, normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
+                            outliers_threshold= outliers_threshold, date_features= date_features, ignore_features=ignore_features,
+                            handle_unknown_categorical= handle_unknown_categorical, unknown_categorical_method = unknown_categorical_method,
+                            balance_select=balance_select, balance_ds= balance_ds,train_size=train_size,comparison_metric=comparison_metric)
+                
+                elif model_type == 'Regression' and preprocess:
+                    RegressorModel(df, target= target, silent= True, use_gpu= use_gpu, preprocess= preprocess,
+                            categorical_features= categorical_features, categorical_imputation= categorical_imputation,
+                            ignore_low_variance= ignore_low_variance, combine_rare_levels= combine_rare_levels,
+                            rare_level_threshold= rare_level_threshold,ordinal_features= ordinal_features_setted,
+                            high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method,
+                            numeric_features= num_features, numeric_imputation= numeric_imputation,
+                            normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
+                            outliers_threshold= outliers_threshold, date_features= date_features, 
+                            ignore_features=ignore_features, handle_unknown_categorical= handle_unknown_categorical,
+                            unknown_categorical_method = unknown_categorical_method,
+                            train_size= train_size, comparison_metric= comparison_metric,
+                    )
+
                 elif model_type == 'Classification' and not preprocess:
                     ClassifierModel(df, target= target, use_gpu= use_gpu,train_size= train_size,comparison_metric=comparison_metric, preprocess= False)
                 elif model_type == 'Regression' and not preprocess:
-                    pass
+                    RegressorModel(df, target= target, use_gpu= use_gpu,train_size= train_size,comparison_metric=comparison_metric, preprocess= False)
 
-                if model_type == 'Regression':
-                    regression.setup(
-                        df, target= target, silent= True, use_gpu= use_gpu, preprocess= preprocess,
-                        categorical_features= categorical_features, categorical_imputation= categorical_imputation, ignore_low_variance= ignore_low_variance,
-                        combine_rare_levels= combine_rare_levels, rare_level_threshold= rare_level_threshold,ordinal_features= ordinal_features_setted,
-                        high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method, numeric_features= num_features,
-                        numeric_imputation= numeric_imputation, normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
-                        outliers_threshold= outliers_threshold, date_features= date_features, ignore_features=ignore_features, handle_unknown_categorical= handle_unknown_categorical,
-                        unknown_categorical_method = unknown_categorical_method
-                        )
-                    setup_df = regression.pull()
-                    st.info("Loaded settings")
-                    st.dataframe(setup_df)
-                    best_model = regression.compare_models()
-                    compare_df = regression.pull()
-                    st.info("Best Model")
-                    st.dataframe(compare_df)
-                    best_model
-                    regression.save_model(best_model,"best_model")
+                
             
         else:
             st.warning("No dataset Loaded")

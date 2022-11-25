@@ -1,13 +1,12 @@
-import pandas as pd
-
 class Model():
-    '''Contains the parameters shared by all models'''
+    '''Parent class contains the parameters shared by all models'''
     def __init__(self,*args, **kwargs) -> None:
         #general settings
         self.use_gpu = kwargs.get('use_gpu',False)
         self.preprocess = kwargs.get('preprocess',False)
         self.seed = kwargs.get('seed',0)
         self.train_size = kwargs.get('train_size', 0.7)
+
         #categorical settings
         self.categorical_features = kwargs.get('categorical_features',[])
         self.ignore_low_variance = kwargs.get('ignore_low_variance',False)

@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
-from pycaret import regression
+
 from scripts.classifer import ClassifierModel
 from scripts.regressor import RegressorModel
+from scripts.clusterer import ClusteringModel
 
 class ModelSelection():
     def __init__(self) -> None:
@@ -13,17 +14,37 @@ class ModelSelection():
     def model_selection_interface(self):
         if os.path.exists("./assets/data/data.csv"):
             df = pd.read_csv("./assets/data/data.csv")
-            model_type = st.selectbox('Model Type',['Regression','Classification'])
+            model_type = st.selectbox('Model Type',['Regression','Classification','Clustering'])
             target = st.selectbox('Select target column', df.columns)
             train_size = st.slider('Train size',min_value=0.,max_value=1. ,value=0.8)
-            if model_type == 'Classification':
+            
+            if model_type == 'Clustering':
+                st.header('Clustering Settings')
+                st.info('Target its treatead as Ground Truth')
+                num_clusters = st.number_input('Number of clusters',value=4, step=1)
+                options = ['K-means Clustering', 'Affinity Propagation', 'Mean shift Clustering', 'Spectral Clustering',
+                            'Agglomerative Clustering', 'Density-Based Spatial Clustering', 'OPTICS Clustering', 'Birch Clustering',
+                            'K-Modes Clustering']
+                model_names = ['kmeans','ap','meanshift','sc','hclust','dbscan','optics','birch','kmodes']
+                model = st.selectbox('Model to use',options,0)
+                st.markdown('## Model Plotting options')
+                plot_choice = st.selectbox('Plot type',['elbow','cluster','tsne','silhouette','distance','distribution'],1)
+                feature_choice = st.selectbox('Feature to plot',df.columns,0)
+
+                for option in options:
+                    if model == option:
+                        model = model_names[options.index(option)]
+            elif model_type == 'Classification':
                 comparison_metric = st.selectbox('Metric to compare models',['Accuracy','AUC','F1','Recall','Prec.'])
+
             elif model_type == 'Regression':
                 comparison_metric = st.selectbox('Metric to compare models',['R2','MAE','MSE','RMSE','MAPE'])
                 
             use_gpu = st.checkbox('Use GPU')
             preprocess = st.checkbox('Preprocess')
             
+            
+
             #Preprocessing
             if preprocess:
                 seed = st.number_input('Seed',0)
@@ -64,9 +85,10 @@ class ModelSelection():
                 normalize = st.checkbox('Normalize')
                 st.info("* zscore: is calculated as z = (x - u) / s\n\n* minmax: scales and translates each feature individually such that it is in the range of 0 - 1.\n\n* maxabs: scales and translates each feature individually such that the maximal absolute value of each feature will be 1.0.\n    It does not shift/center the data, and thus does not destroy any sparsity.\n\n* robust: scales and translates each feature according to the Interquartile range.\n  When the dataset contains outliers, robust scaler often gives better results.")
                 normalize_method = st.selectbox('Normalize method',['zscore','minmax','maxabs','robust'],0)
-                remove_outliers = st.checkbox('remove outliers')
-                st.info('Removes outliers using the Singular Value Decomposition.')  
-                outliers_threshold = st.slider('Outlier threshold',0.,1.,0.05)
+                if model_type != 'Clustering':
+                    remove_outliers = st.checkbox('remove outliers')
+                    st.info('Removes outliers using the Singular Value Decomposition.')  
+                    outliers_threshold = st.slider('Outlier threshold',0.,1.,0.05)
                     
                 #Date Features
                 st.header('Date Features')
@@ -123,7 +145,7 @@ class ModelSelection():
                             high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method, numeric_features= num_features,
                             numeric_imputation= numeric_imputation, normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
                             outliers_threshold= outliers_threshold, date_features= date_features, ignore_features=ignore_features,
-                            handle_unknown_categorical= handle_unknown_categorical, unknown_categorical_method = unknown_categorical_method,
+                            handle_unknown_categorical= handle_unknown_categorical, unknown_categorical_method = unknown_categorical_method,seed=seed,
                             balance_select=balance_select, balance_ds= balance_ds,train_size=train_size,comparison_metric=comparison_metric)
                 
                 elif model_type == 'Regression' and preprocess:
@@ -136,16 +158,29 @@ class ModelSelection():
                             normalize= normalize, normalize_method= normalize_method, remove_outliers=remove_outliers,
                             outliers_threshold= outliers_threshold, date_features= date_features, 
                             ignore_features=ignore_features, handle_unknown_categorical= handle_unknown_categorical,
-                            unknown_categorical_method = unknown_categorical_method,
+                            unknown_categorical_method = unknown_categorical_method,seed=seed,
                             train_size= train_size, comparison_metric= comparison_metric,
                     )
-
+                elif model_type == 'Clustering' and preprocess:
+                    ClusteringModel(
+                            df, silent= True, use_gpu= use_gpu, preprocess= preprocess,
+                            categorical_features= categorical_features, categorical_imputation= categorical_imputation,
+                            ignore_low_variance= ignore_low_variance, combine_rare_levels= combine_rare_levels,
+                            rare_level_threshold= rare_level_threshold,ordinal_features= ordinal_features_setted,
+                            high_cardinality_features= high_cardinality_features, high_cardinality_method= high_cardinality_method,
+                            numeric_features= num_features, numeric_imputation= numeric_imputation,
+                            normalize= normalize, normalize_method= normalize_method, date_features= date_features, 
+                            ignore_features=ignore_features, handle_unknown_categorical= handle_unknown_categorical,
+                            unknown_categorical_method = unknown_categorical_method,seed=seed,
+                            ground_truth=target,plot_choice=plot_choice,feature_choice=feature_choice,
+                            num_clusters=num_clusters,model=model
+                    )
                 elif model_type == 'Classification' and not preprocess:
                     ClassifierModel(df, target= target, use_gpu= use_gpu,train_size= train_size,comparison_metric=comparison_metric, preprocess= False)
                 elif model_type == 'Regression' and not preprocess:
                     RegressorModel(df, target= target, use_gpu= use_gpu,train_size= train_size,comparison_metric=comparison_metric, preprocess= False)
-
+                elif model_type == 'Clustering' and not preprocess:
+                    ClusteringModel(df,use_gpu= use_gpu, ground_truth=target,num_clusters=num_clusters,model=model, preprocess= False)
                 
-            
         else:
             st.warning("No dataset Loaded")

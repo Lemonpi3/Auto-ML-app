@@ -25,12 +25,12 @@ class RegressorModel(Model):
                             outliers_threshold= self.outliers_threshold, date_features= self.date_features, 
                             ignore_features=self.ignore_features, handle_unknown_categorical= self.handle_unknown_categorical,
                             unknown_categorical_method = self.unknown_categorical_method,
-                            train_size= self.train_size, comparison_metric= self.comparison_metric,
+                            train_size= self.train_size, 
                             )
         setup_df = regression.pull()
         st.info("Loaded settings")
         st.dataframe(setup_df)
-        best_model = regression.compare_models()
+        best_model = regression.compare_models(n_select=5, sort=self.comparison_metric)
         compare_df = regression.pull()
         st.info("Best Model")
         st.dataframe(compare_df)

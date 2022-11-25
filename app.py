@@ -1,15 +1,14 @@
-import streamlit as st
+import os
+import pandas_profiling
 import FileReader
 import DataCleaner
-import os
-from modelselectioninterface import ModelSelection
+
+import streamlit as st
 import numpy as np
 import pandas as pd
-import pandas_profiling
-from streamlit_pandas_profiling import st_profile_report
 
-from pycaret import regression, classification
-from imblearn.over_sampling import SMOTENC, SMOTE, RandomOverSampler, ADASYN, KMeansSMOTE, SVMSMOTE
+from streamlit_pandas_profiling import st_profile_report
+from modelselectioninterface import ModelSelection
 
 st.set_page_config(layout="wide",page_title='Auto ML app 🤖',page_icon='🤖')
 

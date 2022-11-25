@@ -15,11 +15,13 @@ class ModelSelection():
         if os.path.exists("./assets/data/data.csv"):
             df = pd.read_csv("./assets/data/data.csv")
             model_type = st.selectbox('Model Type',['Regression','Classification','Clustering'])
-            target = st.selectbox('Select target column', df.columns)
+            target = st.selectbox('Select target column',[None] + list(df.columns), 0)
             train_size = st.slider('Train size',min_value=0.,max_value=1. ,value=0.8)
-            
+            use_gpu = st.checkbox('Use GPU')
+            preprocess = st.checkbox('Preprocess')
+
             if model_type == 'Clustering':
-                st.header('Clustering Settings')
+                st.header('Clustering Settings\n---------------------')
                 st.info('Target its treatead as Ground Truth')
                 num_clusters = st.number_input('Number of clusters',value=4, step=1)
                 options = ['K-means Clustering', 'Affinity Propagation', 'Mean shift Clustering', 'Spectral Clustering',
@@ -27,7 +29,7 @@ class ModelSelection():
                             'K-Modes Clustering']
                 model_names = ['kmeans','ap','meanshift','sc','hclust','dbscan','optics','birch','kmodes']
                 model = st.selectbox('Model to use',options,0)
-                st.markdown('## Model Plotting options')
+                st.markdown('### Model Plotting options')
                 plot_choice = st.selectbox('Plot type',['elbow','cluster','tsne','silhouette','distance','distribution'],1)
                 feature_choice = st.selectbox('Feature to plot',df.columns,0)
 
@@ -40,13 +42,13 @@ class ModelSelection():
             elif model_type == 'Regression':
                 comparison_metric = st.selectbox('Metric to compare models',['R2','MAE','MSE','RMSE','MAPE'])
                 
-            use_gpu = st.checkbox('Use GPU')
-            preprocess = st.checkbox('Preprocess')
+            
             
             
 
             #Preprocessing
             if preprocess:
+                st.header('Preprocessing\n---------------------')
                 seed = st.number_input('Seed',0)
                 #Categorical features
                 st.header('Categorical Columns Setup')

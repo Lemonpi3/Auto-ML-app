@@ -8,7 +8,6 @@ def read_file(file,termination):
     if termination == 'csv':
         process_csv(file=file)
     if termination == 'xlsx':
-        st.warning('TBD')
         process_xlsx(file=file)
     if termination == 'json':
         process_json(file=file)
@@ -18,7 +17,6 @@ def read_from_url(url,format_type):
         st.info('Make sure that the url leads directly to the csv')
         process_csv(url=url)
     if format_type == 'xlsx':
-        st.warning('TBD')
         process_xlsx(url=url)
     if format_type == 'json':
         st.info('Make sure that the url leads directly to the json contents Example URL: http://api.steampowered.com/ISteamWebAPIUtil/GetSupportedAPIList/v0001/')
@@ -44,7 +42,17 @@ def process_csv(file = None, url = None):
                 df.to_csv('./assets/data/data.csv',index=False)
 
 def process_xlsx(file = None, url = None):
-    pass
+    heading = st.number_input('header_row',value=0)
+    sheet_name = st.text_input('Sheet Name',value="")
+    if sheet_name == "":
+        sheet_name=0
+    if file:
+        df = pd.read_excel(file,header=heading,sheet_name=sheet_name)
+    if url:
+        df = pd.read_excel(url,header=heading,sheet_name=sheet_name)
+    if len(df):
+        st.dataframe(df)
+        df.to_csv('./assets/data/data.csv',index=False)
 
 def process_json(file = None, url = None):
     key = st.text_input('if it is a nested json place the json key you want to stract, leave blank if you want it as it comes','')
